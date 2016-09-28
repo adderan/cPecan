@@ -50,7 +50,7 @@ builds = lastz lastz_D lastz_32
 #
 #---------
 
-definedForAll = -Wall -Wextra -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
+definedForAll = -Wall -Wextra -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -Dcollect_stats
 flagsFor32    = -Dmax_sequence_index=32 -Dmax_malloc_index=40 -Ddiag_hash_size=4194304
 
 allowBackToBackGaps ?= 0
@@ -76,7 +76,7 @@ srcFiles = lastz infer_scores \
            segment edit_script                                            \
            identity_dist coverage_dist continuity_dist                    \
            output gfa lav axt maf cigar sam genpaf text_align align_diffs \
-           utilities dna_utilities sequences capsule
+           utilities dna_utilities sequences capsule seed_prob_table
 
 incFiles = lastz.h infer_scores.h \
            seeds.h pos_table.h quantum.h seed_search.h diag_hash.h                            \
@@ -84,7 +84,7 @@ incFiles = lastz.h infer_scores.h \
            segment.h edit_script.h                                                            \
            identity_dist.h coverage_dist.h continuity_dist.h                                  \
            output.h gfa.h lav.h axt.h maf.h sam.h cigar.h genpaf.h text_align.h align_diffs.h \
-           utilities.h dna_utilities.h sequences.h capsule.h
+           utilities.h dna_utilities.h sequences.h capsule.h seed_prob_table.h
 
 %.o: %.c version.mak ${incFiles}
 	${CC} -c ${CFLAGS} -Dscore_type=\'I\' $< -o $@

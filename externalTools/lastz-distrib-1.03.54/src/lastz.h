@@ -438,6 +438,8 @@ typedef struct control
 	FILE*		statsFile;		// (I-copy) file to write statistics to (can be
 								//     .. NULL)
 	char*		statsFilename;	//     name of stats file (can be NULL)
+    FILE*       seedSamplingProbabilitiesFile;
+    char*       seedSamplingProbabilitiesFilename;
 	int			showPosTable;	//     whether or not to show target positions
 								//     .. table (one of spt_xxx values)
 	} control;
@@ -471,7 +473,8 @@ enum
 void set_up_hit_processor (control* params, int collectingCensus,
                            hitprocessor* hitProc, void** hitProcInfo);
 
-int  start_one_strand     (seq* target, postable* targPositions, seq* query,
+int  start_one_strand     (seq* target, postable* targPositions, seedprobtable* spt, 
+                            seq* query,
                            int emptyAnchors, u32 prevAnchorsCount,
                            hitprocessor hitProc, void* hitProcInfo);
 void finish_one_strand    (seq* target, u8* targetRev,
