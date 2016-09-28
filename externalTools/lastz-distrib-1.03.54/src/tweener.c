@@ -795,7 +795,7 @@ static void bounded_align
 	// collect_inner_hsps(), which is called from process_for_simple_hit()
 
 	empty_segment_table (innerAnchors);
-	seed_hit_search (tweenSeq1, seq1Positions,
+	seed_hit_search (tweenSeq1, seq1Positions, NULL,
 	                 tweenSeq2, 0, tweenSeq2->len, /*selfCompare*/ false,
 	                 upperCharToBits, innerSeed,
 	                 /* searchLimit */ 0, 0,

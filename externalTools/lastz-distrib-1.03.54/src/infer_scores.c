@@ -844,7 +844,7 @@ static void align_for_stats
 			params->minMatchCount = (u32) ceil (query->trueLen * params->minMatchCountRatio);
 		if (params->whichStrand < 0)
 			rev_comp_sequence (query, params->scoring->qToComplement);
-		abortQuery = !start_one_strand (target, targPositions, query,
+		abortQuery = !start_one_strand (target, targPositions, NULL, query,
 		                                /* empty anchors */ true,
 		                                /* prev anchor count */ 0,
 		                                hitProc, hitProcInfo);
@@ -856,7 +856,7 @@ static void align_for_stats
 		if (params->whichStrand > 0)
 			{
 			rev_comp_sequence (query, params->scoring->qToComplement);
-			abortQuery = !start_one_strand (target, targPositions, query,
+			abortQuery = !start_one_strand (target, targPositions, NULL, query,
 			                                /* empty anchors */ !collectHspsFromBoth,
 			                                /* prev anchor count */ 0,
 			                                hitProc, hitProcInfo);

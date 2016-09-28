@@ -136,6 +136,7 @@ char* svnRevisionNumber      = SUBVERSION_REV;
 #include "sequences.h"			// sequence stuff
 #include "seeds.h"				// seed strategy stuff
 #include "pos_table.h"			// position table stuff
+#include "sampling_rates_table.h"    // sampling rates table
 #include "capsule.h"			// multi-process sharing stuff
 #include "seed_search.h"		// seed hit search stuff
 #include "quantum.h"			// quantum DNA search stuff
@@ -440,6 +441,8 @@ static const control defaultParams =
 	false,								// showStats
 	NULL,								// statsFile
 	NULL,								// statsFilename
+	NULL,								// samplingRatesFile
+	NULL,								// samplingRatesFilename
 	spt_dont							// showPosTable
 	};
 
@@ -638,6 +641,7 @@ int main
 	seq*			target        = NULL;
 	seq*			query         = NULL;
 	postable*		targPositions = NULL;
+    samplingratestable*  samplingRatesTable = NULL;
 #ifdef trackTargetRev
 	int				freeTargetRev = false;
 #endif // trackTargetRev
@@ -721,6 +725,7 @@ int main
 		currParams->statsFile = fopen_or_die (currParams->statsFilename, "wt");
 		free_if_valid ("stats file name", currParams->statsFilename);
 		}
+
 
 	if (currParams->showStats)
 		statsF = (currParams->statsFile != NULL)? currParams->statsFile : stderr;
@@ -1206,6 +1211,10 @@ next_target:
 		lastz_show_stats_before (statsF);
 		pos_table_show_stats (statsF, targPositions);
 		}
+    if (currParams->samplingRatesFile) {
+        samplingRatesTable = load_prob_table(currParams->samplingRatesFile, 
+                currParams->hitSeed->weight);
+    }
 
 	//////////
 	// perform scoring inference, if requested
@@ -1536,7 +1545,7 @@ next_target:
 			gappilyInfo->rev2 = currParams->rev2;
 			}
 
-		abortQuery = !start_one_strand (target, targPositions, query,
+		abortQuery = !start_one_strand (target, targPositions, samplingRatesTable, query,
 		                                /* empty anchors */ emptyAnchors,
 		                                /* prev anchor count */ 0,
 		                                hitProc, voidHitProcInfo);
@@ -1603,7 +1612,7 @@ next_target:
 				limit_segment_table (anchors, 0);
 				}
 
-			abortQuery = !start_one_strand (target, targPositions, query,
+			abortQuery = !start_one_strand (target, targPositions, samplingRatesTable, query,
 			                                /* empty anchors */ emptyAnchors || (!collectHspsFromBoth),
 			                                prevAnchorCount,
 			                                hitProc, voidHitProcInfo);
@@ -2909,6 +2918,7 @@ void set_up_hit_processor
 int start_one_strand
    (seq*			target,
 	postable*		targPositions,
+    samplingratestable* srt,
 	seq*			query,
 	int				emptyAnchors,
 	u32				prevAnchorCount,
@@ -2988,14 +2998,14 @@ int start_one_strand
 	else
 		{
 #ifndef densityFiltering // === density filtering DISabled
-		seed_hit_search (target, targPositions,
+		seed_hit_search (target, targPositions, srt,
 		                 query, 0, query->len, currParams->selfCompare,
 		                 currParams->upperCharToBits, currParams->hitSeed,
 		                 searchLimit,
 		                 (currParams->searchLimitWarn)? currParams->searchLimit : 0,
 		                 hitProc, hitProcInfo);
 #else                    // === density filtering ENabled
-		basesHit = seed_hit_search (target, targPositions,
+		basesHit = seed_hit_search (target, targPositions, srt,
 		                            query, 0, query->len, currParams->selfCompare,
 		                            currParams->upperCharToBits, currParams->hitSeed,
 		                            searchLimit,
@@ -6710,6 +6720,12 @@ static void parse_options_loop
 			{ lzParams->mirrorHSP = false;  goto next_arg; }
 
 		// --out[put]=<file>
+		if (strcmp_prefix (arg, "--samplingRates=") == 0)
+			{
+			if (lzParams->samplingRatesFilename != NULL) goto duplicated_option;
+			lzParams->samplingRatesFilename = copy_string (argStr);
+			goto next_arg;
+			}
 
 		if ((strcmp_prefix (arg, "--out=")    == 0)
 		 || (strcmp_prefix (arg, "--output=") == 0))
@@ -8100,6 +8116,10 @@ static void parse_options
 		free_if_valid ("parse_options (seq2Actions)",  seq2Actions);  seq2Actions = NULL;
 		lzParams->seq2Filename = tempS;
 		}
+    if (lzParams->samplingRatesFilename != NULL)
+    {
+        lzParams->samplingRatesFile = fopen_or_die (lzParams->samplingRatesFilename, "r");
+    }
 
 	// determine which sequences are quantum
 
@@ -10000,4 +10020,3 @@ static void lastz_show_stats
 	fprintf (f, "-------------------\n");
 #endif // collect_stats
 	}
-
