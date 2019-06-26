@@ -27,7 +27,6 @@
 #include "sequences.h"			// sequence stuff
 #include "seeds.h"				// seed matching stuff
 #include "pos_table.h"			// position table stuff
-#include "sampling_rates_table.h"    //
 #include "diag_hash.h"			// diagonals hashing stuff
 #include "segment.h"			// segment table management stuff
 
@@ -141,7 +140,8 @@ struct
 
 static seq*			seq1;
 static postable*	pt;
-static samplingratestable* srt;
+static double* samplingRates;
+static double		baseSamplingRate;
 static seq*			seq2;
 static unspos		start;
 static unspos		end;
@@ -233,7 +233,7 @@ static char* display_sequence_character (seq* _seq, u8 ch);
 // Arguments:
 //	seq*		seq1:			The sequence being searched.
 //	postable*	pt:				A table of positions of words in seq1.
-//	samplingratestable* srt;       Table of sampling probabilities for each packed seed
+//	double* samplingRates;       Table of sampling probabilities for each packed seed
 //	seq*		seq2:			The sequence being searched for.
 //	unspos		start:			First sequence position to consider.  Zero is
 //								.. the first possible position.
@@ -318,7 +318,8 @@ static char* display_sequence_character (seq* _seq, u8 ch);
 u64 seed_hit_search
    (seq*			_seq1,
 	postable*		_pt,
-    samplingratestable* _srt,
+    double* _samplingRates,
+	double				_baseSamplingRate,
 	seq*			_seq2,
 	unspos			_start,
 	unspos			_end,
@@ -360,7 +361,8 @@ u64 seed_hit_search
 
 	seq1              = _seq1;
 	pt                = _pt;
-    srt               = _srt;
+	samplingRates     = _samplingRates;
+	baseSamplingRate  = _baseSamplingRate;
 	seq2              = _seq2;
 	start             = _start;
 	end               = _end;
@@ -822,14 +824,11 @@ static u64 find_table_matches
 		}
 
     //Get the seed probability if a sampling table has been provided
-    double chooseSeedProbability = 1.0;
-    if (srt) {
-        chooseSeedProbability = srt->probs[packed2];
-		
-        if (chooseSeedProbability == 0.0) {
-            chooseSeedProbability = 1.0;
-        }
-    }
+	double chooseSeedProbability = baseSamplingRate;
+	if ((samplingRates != NULL) && (samplingRates[packed2] != 0.0)) {
+		chooseSeedProbability = samplingRates[packed2];
+	}
+	//fprintf(stderr, "Using sampling rate %lf\n", chooseSeedProbability);
 
 	for (pos=pt->last[packed2] ; pos!=noPreviousPos ; pos=pt->prev[pos])
 		{

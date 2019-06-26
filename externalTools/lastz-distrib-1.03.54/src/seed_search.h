@@ -13,7 +13,6 @@
 #include "utilities.h"			// utility stuff
 #include "sequences.h"			// sequence stuff
 #include "pos_table.h"			// position table stuff
-#include "sampling_rates_table.h"
 #include "segment.h"			// segment table management stuff
 
 // establish ownership of global variables
@@ -263,7 +262,9 @@ int64 seed_search_bp_extended      (void);
 //
 //----------
 
-u64    seed_hit_search        (seq* seq1, postable* pt, samplingratestable* spt,
+u64    seed_hit_search        (seq* seq1, postable* pt, 
+							double* samplingRates, 
+							double baseSamplingRate,
                                seq* seq2, unspos start, unspos end,
                                int selfCompare,
                                const s8 charToBits[], seed* hitSeed,

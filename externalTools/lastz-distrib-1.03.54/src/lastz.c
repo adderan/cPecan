@@ -136,7 +136,6 @@ char* svnRevisionNumber      = SUBVERSION_REV;
 #include "sequences.h"			// sequence stuff
 #include "seeds.h"				// seed strategy stuff
 #include "pos_table.h"			// position table stuff
-#include "sampling_rates_table.h"    // sampling rates table
 #include "capsule.h"			// multi-process sharing stuff
 #include "seed_search.h"		// seed hit search stuff
 #include "quantum.h"			// quantum DNA search stuff
@@ -443,6 +442,7 @@ static const control defaultParams =
 	NULL,								// statsFilename
 	NULL,								// samplingRatesFile
 	NULL,								// samplingRatesFilename
+	1.0,								// baseSamplingRate
 	spt_dont							// showPosTable
 	};
 
@@ -641,7 +641,8 @@ int main
 	seq*			target        = NULL;
 	seq*			query         = NULL;
 	postable*		targPositions = NULL;
-    samplingratestable*  samplingRatesTable = NULL;
+    double*  samplingRates = NULL;
+	double				baseSamplingRate;
 #ifdef trackTargetRev
 	int				freeTargetRev = false;
 #endif // trackTargetRev
@@ -1211,10 +1212,24 @@ next_target:
 		lastz_show_stats_before (statsF);
 		pos_table_show_stats (statsF, targPositions);
 		}
-    if (currParams->samplingRatesFile) {
-        samplingRatesTable = load_prob_table(currParams->samplingRatesFile, 
-                currParams->hitSeed->weight);
+    if (currParams->samplingRatesFile != NULL) {
+		//Load the seed sampling probabilities
+	    u32 numSeeds = ((u32) 1) << currParams->hitSeed->weight;
+    	u64 bytesNeeded = round_up_16 (((u64) numSeeds) * sizeof(double));
+
+        samplingRates = (double*) zalloc_or_die ("sampling_rates_table", bytesNeeded);
+		char line[500];
+		u32 word = 0;
+		double prob;
+		while(fgets(line, sizeof(line), currParams->samplingRatesFile)) {
+			int res = sscanf(line, "%lx\t%lf", &word, &prob);
+			if (res != 2) continue;
+			samplingRates[word] = prob;
+        
+    	}
+
     }
+	baseSamplingRate = currParams->baseSamplingRate;
 
 	//////////
 	// perform scoring inference, if requested
@@ -1545,7 +1560,7 @@ next_target:
 			gappilyInfo->rev2 = currParams->rev2;
 			}
 
-		abortQuery = !start_one_strand (target, targPositions, samplingRatesTable, query,
+		abortQuery = !start_one_strand (target, targPositions, samplingRates, baseSamplingRate, query,
 		                                /* empty anchors */ emptyAnchors,
 		                                /* prev anchor count */ 0,
 		                                hitProc, voidHitProcInfo);
@@ -1612,7 +1627,7 @@ next_target:
 				limit_segment_table (anchors, 0);
 				}
 
-			abortQuery = !start_one_strand (target, targPositions, samplingRatesTable, query,
+			abortQuery = !start_one_strand (target, targPositions, samplingRates, baseSamplingRate, query,
 			                                /* empty anchors */ emptyAnchors || (!collectHspsFromBoth),
 			                                prevAnchorCount,
 			                                hitProc, voidHitProcInfo);
@@ -2918,7 +2933,8 @@ void set_up_hit_processor
 int start_one_strand
    (seq*			target,
 	postable*		targPositions,
-    samplingratestable* srt,
+    double* samplingRates,
+	double				baseSamplingRate,
 	seq*			query,
 	int				emptyAnchors,
 	u32				prevAnchorCount,
@@ -2998,15 +3014,16 @@ int start_one_strand
 	else
 		{
 #ifndef densityFiltering // === density filtering DISabled
-		seed_hit_search (target, targPositions, srt,
+		seed_hit_search (target, targPositions, samplingRates, baseSamplingRate,
 		                 query, 0, query->len, currParams->selfCompare,
 		                 currParams->upperCharToBits, currParams->hitSeed,
 		                 searchLimit,
 		                 (currParams->searchLimitWarn)? currParams->searchLimit : 0,
 		                 hitProc, hitProcInfo);
 #else                    // === density filtering ENabled
-		basesHit = seed_hit_search (target, targPositions, srt,
-		                            query, 0, query->len, currParams->selfCompare,
+		basesHit = seed_hit_search (target, targPositions, samplingRates, 
+									baseSamplingRate, query, 0, 
+									query->len, currParams->selfCompare,
 		                            currParams->upperCharToBits, currParams->hitSeed,
 		                            searchLimit,
 		                            (currParams->searchLimitWarn)? currParams->searchLimit : 0,
@@ -6718,6 +6735,10 @@ static void parse_options_loop
 
 		if (strcmp (arg, "--nomirror") == 0)
 			{ lzParams->mirrorHSP = false;  goto next_arg; }
+		if (strcmp_prefix (arg, "--baseSamplingRate") == 0) {
+			lzParams->baseSamplingRate = string_to_double (argStr);
+			goto next_arg;
+		}
 
 		// --out[put]=<file>
 		if (strcmp_prefix (arg, "--samplingRates=") == 0)

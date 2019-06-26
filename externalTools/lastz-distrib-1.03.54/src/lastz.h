@@ -440,6 +440,7 @@ typedef struct control
 	char*		statsFilename;	//     name of stats file (can be NULL)
     FILE*       samplingRatesFile;
     char*       samplingRatesFilename;
+	double		baseSamplingRate;
 	int			showPosTable;	//     whether or not to show target positions
 								//     .. table (one of spt_xxx values)
 	} control;
@@ -473,7 +474,7 @@ enum
 void set_up_hit_processor (control* params, int collectingCensus,
                            hitprocessor* hitProc, void** hitProcInfo);
 
-int  start_one_strand     (seq* target, postable* targPositions, samplingratestable* spt, 
+int  start_one_strand     (seq* target, postable* targPositions, double* samplingRates, double baseSamplingRate,
                             seq* query,
                            int emptyAnchors, u32 prevAnchorsCount,
                            hitprocessor hitProc, void* hitProcInfo);
