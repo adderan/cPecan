@@ -440,8 +440,8 @@ static const control defaultParams =
 	false,								// showStats
 	NULL,								// statsFile
 	NULL,								// statsFilename
-	NULL,								// samplingRatesFile
-	NULL,								// samplingRatesFilename
+	NULL,								// ignoredSeedsFile
+	NULL,								// ignoredSeedsFilename
 	1.0,								// baseSamplingRate
 	spt_dont							// showPosTable
 	};
@@ -641,7 +641,7 @@ int main
 	seq*			target        = NULL;
 	seq*			query         = NULL;
 	postable*		targPositions = NULL;
-    double*  samplingRates = NULL;
+    int*  ignoredSeeds = NULL;
 	double				baseSamplingRate;
 #ifdef trackTargetRev
 	int				freeTargetRev = false;
@@ -1212,19 +1212,18 @@ next_target:
 		lastz_show_stats_before (statsF);
 		pos_table_show_stats (statsF, targPositions);
 		}
-    if (currParams->samplingRatesFile != NULL) {
+    if (currParams->ignoredSeedsFile != NULL) {
 		//Load the seed sampling probabilities
 	    u32 numSeeds = ((u32) 1) << currParams->hitSeed->weight;
-    	u64 bytesNeeded = round_up_16 (((u64) numSeeds) * sizeof(double));
+    	u64 bytesNeeded = round_up_16 (((u64) numSeeds) * sizeof(int));
 
-        samplingRates = (double*) zalloc_or_die ("sampling_rates_table", bytesNeeded);
+        ignoredSeeds = (int*) zalloc_or_die ("sampling_rates_table", bytesNeeded);
 		char line[500];
 		u32 word = 0;
-		double prob;
-		while(fgets(line, sizeof(line), currParams->samplingRatesFile)) {
-			int res = sscanf(line, "%lx\t%lf", &word, &prob);
-			if (res != 2) continue;
-			samplingRates[word] = prob;
+		while(fgets(line, sizeof(line), currParams->ignoredSeedsFile)) {
+			int res = sscanf(line, "%lx", &word);
+			if (res != 1) continue;
+			ignoredSeeds[word] = true;
         
     	}
 
@@ -1560,7 +1559,7 @@ next_target:
 			gappilyInfo->rev2 = currParams->rev2;
 			}
 
-		abortQuery = !start_one_strand (target, targPositions, samplingRates, baseSamplingRate, query,
+		abortQuery = !start_one_strand (target, targPositions, ignoredSeeds, baseSamplingRate, query,
 		                                /* empty anchors */ emptyAnchors,
 		                                /* prev anchor count */ 0,
 		                                hitProc, voidHitProcInfo);
@@ -1627,7 +1626,7 @@ next_target:
 				limit_segment_table (anchors, 0);
 				}
 
-			abortQuery = !start_one_strand (target, targPositions, samplingRates, baseSamplingRate, query,
+			abortQuery = !start_one_strand (target, targPositions, ignoredSeeds, baseSamplingRate, query,
 			                                /* empty anchors */ emptyAnchors || (!collectHspsFromBoth),
 			                                prevAnchorCount,
 			                                hitProc, voidHitProcInfo);
@@ -2933,7 +2932,7 @@ void set_up_hit_processor
 int start_one_strand
    (seq*			target,
 	postable*		targPositions,
-    double* samplingRates,
+    int* ignoredSeeds,
 	double				baseSamplingRate,
 	seq*			query,
 	int				emptyAnchors,
@@ -3014,14 +3013,14 @@ int start_one_strand
 	else
 		{
 #ifndef densityFiltering // === density filtering DISabled
-		seed_hit_search (target, targPositions, samplingRates, baseSamplingRate,
+		seed_hit_search (target, targPositions, ignoredSeeds, baseSamplingRate,
 		                 query, 0, query->len, currParams->selfCompare,
 		                 currParams->upperCharToBits, currParams->hitSeed,
 		                 searchLimit,
 		                 (currParams->searchLimitWarn)? currParams->searchLimit : 0,
 		                 hitProc, hitProcInfo);
 #else                    // === density filtering ENabled
-		basesHit = seed_hit_search (target, targPositions, samplingRates, 
+		basesHit = seed_hit_search (target, targPositions, ignoredSeeds, 
 									baseSamplingRate, query, 0, 
 									query->len, currParams->selfCompare,
 		                            currParams->upperCharToBits, currParams->hitSeed,
@@ -6735,16 +6734,17 @@ static void parse_options_loop
 
 		if (strcmp (arg, "--nomirror") == 0)
 			{ lzParams->mirrorHSP = false;  goto next_arg; }
+
+		// --out[put]=<file>
+
 		if (strcmp_prefix (arg, "--baseSamplingRate") == 0) {
 			lzParams->baseSamplingRate = string_to_double (argStr);
 			goto next_arg;
 		}
-
-		// --out[put]=<file>
-		if (strcmp_prefix (arg, "--samplingRates=") == 0)
+		if (strcmp_prefix (arg, "--ignoredSeeds=") == 0)
 			{
-			if (lzParams->samplingRatesFilename != NULL) goto duplicated_option;
-			lzParams->samplingRatesFilename = copy_string (argStr);
+			if (lzParams->ignoredSeedsFilename != NULL) goto duplicated_option;
+			lzParams->ignoredSeedsFilename = copy_string (argStr);
 			goto next_arg;
 			}
 
@@ -8137,9 +8137,9 @@ static void parse_options
 		free_if_valid ("parse_options (seq2Actions)",  seq2Actions);  seq2Actions = NULL;
 		lzParams->seq2Filename = tempS;
 		}
-    if (lzParams->samplingRatesFilename != NULL)
+    if (lzParams->ignoredSeedsFilename != NULL)
     {
-        lzParams->samplingRatesFile = fopen_or_die (lzParams->samplingRatesFilename, "r");
+        lzParams->ignoredSeedsFile = fopen_or_die (lzParams->ignoredSeedsFilename, "r");
     }
 
 	// determine which sequences are quantum

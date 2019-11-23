@@ -140,7 +140,7 @@ struct
 
 static seq*			seq1;
 static postable*	pt;
-static double* samplingRates;
+static int* ignoredSeeds;
 static double		baseSamplingRate;
 static seq*			seq2;
 static unspos		start;
@@ -233,7 +233,7 @@ static char* display_sequence_character (seq* _seq, u8 ch);
 // Arguments:
 //	seq*		seq1:			The sequence being searched.
 //	postable*	pt:				A table of positions of words in seq1.
-//	double* samplingRates;       Table of sampling probabilities for each packed seed
+//	int* ignoredSeeds;       	Array indicating whether to skip each seed in the alphabet.
 //	seq*		seq2:			The sequence being searched for.
 //	unspos		start:			First sequence position to consider.  Zero is
 //								.. the first possible position.
@@ -318,7 +318,7 @@ static char* display_sequence_character (seq* _seq, u8 ch);
 u64 seed_hit_search
    (seq*			_seq1,
 	postable*		_pt,
-    double* _samplingRates,
+    int* _ignoredSeeds,
 	double				_baseSamplingRate,
 	seq*			_seq2,
 	unspos			_start,
@@ -361,7 +361,7 @@ u64 seed_hit_search
 
 	seq1              = _seq1;
 	pt                = _pt;
-	samplingRates     = _samplingRates;
+	ignoredSeeds     = _ignoredSeeds;
 	baseSamplingRate  = _baseSamplingRate;
 	seq2              = _seq2;
 	start             = _start;
@@ -822,20 +822,16 @@ static u64 find_table_matches
 #endif
 		return 0;
 		}
-
-    //Get the seed probability if a sampling table has been provided
-	double chooseSeedProbability = baseSamplingRate;
-	if ((samplingRates != NULL) && (samplingRates[packed2] != 0.0)) {
-		chooseSeedProbability = samplingRates[packed2];
-	}
-	//fprintf(stderr, "Using sampling rate %lf\n", chooseSeedProbability);
-
+    
+	if (ignoredSeeds && ignoredSeeds[packed2] == true) {
+        return 0;
+    }
+	
 	for (pos=pt->last[packed2] ; pos!=noPreviousPos ; pos=pt->prev[pos])
 		{
-        if ((chooseSeedProbability != 1.0) && (drand48() > chooseSeedProbability)) {
-            continue;
-        }
-
+		if ((baseSamplingRate != 1.0) && (baseSamplingRate != 0.0) && (drand48() > baseSamplingRate)) {
+			continue;
+		}
 		pos1 = adjStart + step*pos;
 
 #ifdef debugSearchPos2
