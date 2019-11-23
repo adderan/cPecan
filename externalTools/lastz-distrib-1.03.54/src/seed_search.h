@@ -263,7 +263,7 @@ int64 seed_search_bp_extended      (void);
 //----------
 
 u64    seed_hit_search        (seq* seq1, postable* pt, 
-							double* samplingRates, 
+							int* ignoredSeeds, 
 							double baseSamplingRate,
                                seq* seq2, unspos start, unspos end,
                                int selfCompare,
