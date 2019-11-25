@@ -189,6 +189,7 @@ postable* build_seed_position_table
 	else
 		record_seed_positions            (pt, seq, upperCharToBits, hitSeed);
 
+	pt->nHits = calloc(pt->wordEntries, sizeof(u32));
 	return pt;
 	}
 
