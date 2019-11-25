@@ -823,16 +823,14 @@ static u64 find_table_matches
 		return 0;
 		}
     
-	double chooseSeedProbability = baseSamplingRate;
+	if (ignoredSeeds[packed2] == true) {
+        return 0;
+    }
+	if ((baseSamplingRate != 1.0) && (baseSamplingRate != 0.0) && (drand48() > baseSamplingRate)) {
+		return 0;
+	}
 	for (pos=pt->last[packed2] ; pos!=noPreviousPos ; pos=pt->prev[pos])
 		{
-        if (ignoredSeeds[packed2] == true) {
-            continue;
-        }
-		if ((chooseSeedProbability != 1.0) && (chooseSeedProbability != 0.0) && (drand48() > chooseSeedProbability)) {
-			continue;
-		}
-
 		pos1 = adjStart + step*pos;
 
 #ifdef debugSearchPos2
