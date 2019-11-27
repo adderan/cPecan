@@ -827,33 +827,34 @@ static u64 find_table_matches
         return 0;
     }
 
-	int *chooseSeed = NULL;
+	//int *chooseSeed = NULL;
+	int numHitsToSample = -1;
 	if (baseSamplingRate != 0.0 && baseSamplingRate != 1.0) {
 		int numHits = 0;
 		for (pos = pt->last[packed2]; pos!=noPreviousPos ; pos = pt->prev[pos]) {
 			numHits++;
 		}
+		fprintf("Num hits: %d")
 		double expectedHits = baseSamplingRate * (double) numHits; 
 		double roundUpProb = expectedHits - (int) expectedHits;
-		int numHitsToSample = (int) expectedHits;
+		numHitsToSample = (int) expectedHits;
 		if (drand48() < roundUpProb) numHitsToSample++;
 
+		/*
 		chooseSeed = calloc(numHits, sizeof(int));
 		for (int i = 0; i < numHitsToSample; i++) {
 			int index = (int) (drand48() * numHits);
 			chooseSeed[index] = true;
 		}
+		*/
 
 	}
 
-	int k = 0;
+	int nSampled = 0;
 	for (pos=pt->last[packed2] ; pos!=noPreviousPos ; pos=pt->prev[pos])
 		{
-		if ((chooseSeed != NULL) && !chooseSeed[k]) {
-			k++;
-			continue;
-		}
-		k++;
+		if ((numHitsToSample >= 0) && (nSampled >= numHitsToSample)) break;
+		nSampled++;
 		pos1 = adjStart + step*pos;
 
 #ifdef debugSearchPos2
@@ -889,7 +890,6 @@ static u64 find_table_matches
 #endif // densityCheckDepth3
 		}
 
-	if (chooseSeed) free(chooseSeed);
 	return basesHit;
 	}
 

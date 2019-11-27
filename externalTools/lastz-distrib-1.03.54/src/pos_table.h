@@ -162,6 +162,7 @@ typedef struct postable
 								// .. thru adjStart+15, with adjStart in the two
 								// .. most significant bits;  this field can be
 								// .. NULL; (see note 1)
+	u32*			nHits;
 	} postable;
 
 #define noPreviousPos ((unspos) -1)

@@ -189,6 +189,15 @@ postable* build_seed_position_table
 	else
 		record_seed_positions            (pt, seq, upperCharToBits, hitSeed);
 
+	//count the number of hits
+	pt->nHits = calloc(pt->wordEntries, sizeof(u32));
+	for (u32 packedSeed = 0; packedSeed < pt->wordEntries; packedSeed++) {
+		for(unspos pos = pt->last[packedSeed]; 
+			pos != noPreviousPos; pos = pt->prev[pos]) {
+				pt->nHits[packedSeed]++;
+		}
+
+	}
 	return pt;
 	}
 
