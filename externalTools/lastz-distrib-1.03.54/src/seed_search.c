@@ -823,15 +823,39 @@ static u64 find_table_matches
 		return 0;
 		}
     
-	if (ignoredSeeds && ignoredSeeds[packed2] == true) {
+	if (ignoredSeeds && (ignoredSeeds[packed2] == true)) {
         return 0;
     }
-	
+
+	int *chosenSeeds = NULL;
+	if (baseSamplingRate != 0.0 && baseSamplingRate != 1.0) {
+
+		//avoid counting the hits more than once
+		if (pt->nHits[packed2] == 0) {
+			for (pos = pt->last[packed2]; pos!=noPreviousPos ; pos = pt->prev[pos]) {
+				pt->nHits[packed2] += 1;
+			}
+		}
+		double expectedHits = baseSamplingRate * (double) pt->nHits[packed2]; 
+		double roundUpProb = expectedHits - (int) expectedHits;
+		int numHitsToSample = (int) expectedHits;
+		if (drand48() < roundUpProb) numHitsToSample++;
+
+		if (numHitsToSample == 0) return 0;
+
+		chosenSeeds = calloc(pt->nHits[packed2], sizeof(int));
+		for (int i = 0; i < numHitsToSample; i++) {
+			int index = drand48() * pt->nHits[packed2];
+			chosenSeeds[index] = 1;
+		}
+
+	}
+
+	int k = -1;
 	for (pos=pt->last[packed2] ; pos!=noPreviousPos ; pos=pt->prev[pos])
 		{
-		if ((baseSamplingRate != 1.0) && (baseSamplingRate != 0.0) && (drand48() > baseSamplingRate)) {
-			continue;
-		}
+		k++;
+		if (chosenSeeds && (chosenSeeds[k] == 0)) continue;
 		pos1 = adjStart + step*pos;
 
 #ifdef debugSearchPos2
@@ -867,6 +891,7 @@ static u64 find_table_matches
 #endif // densityCheckDepth3
 		}
 
+	if (chosenSeeds) free(chosenSeeds);
 	return basesHit;
 	}
 
